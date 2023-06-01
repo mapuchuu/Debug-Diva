@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Diva 1.24</title>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Comic+Neue&display=swap');
+
+        body {
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+            margin: 0;
+            padding: 0;
+            background-color: #96bad4;
+            font-family: 'Comic Neue', Arial, sans-serif;
+            font-weight: 700;
+        }
+
+        .image-container {
+            margin-left: 192px;
+            margin-top: 558px;
+        }
+
+        .container {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #b68e4e;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .message-container {
+            display: flex;
+            flex-direction: column-reverse;
+            overflow-y: auto;
+            max-height: 600px;
+        }
+
+        .message {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .user-message {
+            background-color: #9b9a9a;
+            text-align: right;
+        }
+
+        .assistant-message {
+            background-color: #ecb0fa;
+            text-align: left;
+        }
+
+        .message p {
+            margin: 0;
+            word-wrap: break-word;
+        }
+
+        .input-container {
+            display: flex;
+            margin-top: 20px;
+            align-items: flex-end;
+        }
+
+        .input-container input[type="text"] {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .input-container button {
+            padding: 8px 15px;
+            margin-left: 10px;
+            background-color: #a53974;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        /* Added styles for the image */
+        .anime-girl {
+            width: 150px;
+            height: 156px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="image-container">
+        <img class="anime-girl" src="https://piskel-imgstore-b.appspot.com/img/47520459-ff6e-11ed-b8c1-a1222018d6b8.gif" alt="Anime Girl" autoplay>
+    </div>
+    <div class="container">
+        <div class="message-container" id="chat-container"></div>
+        <form id="form">
+            <div class="input-container">
+                <input type="text" id="user-input" placeholder="Send a message to Debug Diva..." autocomplete="off">
+                <button type="submit">Send</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const chatContainer = document.querySelector("#chat-container");
+        const form = document.querySelector("#form");
+        const userInput = document.querySelector("#user-input");
+
+        form.addEventListener("submit", function(e) {
+            e.preventDefault();
+            const message = userInput.value.trim();
+            if (message === "") {
+                return;
+            }
+
+            appendMessage("You", message, "user-message");
+            userInput.value = "";
+
+            fetch("/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: new URLSearchParams({
+                    query: message
+                })
+            })
+            .then((response) => response.json())
+            .then(data => {
+                const response = data.response;
+                typeMessage("Debug Diva", response, "assistant-message");
+            });
+        });
+
+        function appendMessage(sender, message, className) {
+            const messageDiv = document.createElement("div");
+            messageDiv.classList.add("message", className);
+
+            const senderSpan = document.createElement("span");
+            senderSpan.textContent = sender + ":";
+            messageDiv.appendChild(senderSpan);
+
+            const content = document.createElement("p");
+            content.style.whiteSpace = "pre-wrap"; // Keep line breaks and spaces
+            
+            const processedMessage = message.replace(/(-)/g, "\u2011");
+            content.innerHTML = processedMessage.replace(/ /g, "\u00A0"); // non-breaking spaces
+            messageDiv.appendChild(content);
+
+            chatContainer.prepend(messageDiv);
+        }
+
+
+        function typeMessage(sender, message, className) {
+            const typingDelay = 20; // Delay between each character typing simu
+            const messageDelay = 100; // Delay before displaying the complete message (in milliseconds)
+
+            const messageDiv = document.createElement("div");
+            messageDiv.classList.add("message", className);
+
+            const content = document.createElement("p");
+            const senderSpan = document.createElement("span");
+            senderSpan.textContent = sender + ":";
+            messageDiv.appendChild(senderSpan);
+            messageDiv.appendChild(content);
+            chatContainer.prepend(messageDiv);
+
+            let charIndex = 0;
+            const typingInterval = setInterval(() => {
+                content.textContent += message.charAt(charIndex);
+                charIndex++;
+                if (charIndex === message.length) {
+                    clearInterval(typingInterval);
+                    setTimeout(() => {
+                        appendMessage(sender, message, className);
+                        chatContainer.removeChild(messageDiv);
+                    }, messageDelay);
+                }
+            }, typingDelay);
+        }
+    </script>
+</body>
+</html>
